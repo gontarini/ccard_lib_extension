@@ -2,8 +2,10 @@ NAME = HyperLogLogPlusPlus
 
 CPP             = g++
 RM              = rm -f
-CPP_FLAGS       = -Wall -c -I. -O2 -std=c++11
+CPP_FLAGS       = -Wall -g -c -l/usr/lib/libccard-lib.a -l/usr/lib/libccard-lib.so -l/libccard-lib.0.1.a -O2 -std=c++11 
 
+
+#I/home/pawel/Dokumenty/Sotrender/Interface_ccard_lib/ccard-lib/include/
 PREFIX			= /usr
 #Edit these lines to correspond with your own directories
 LIBRARY_DIR		= $(shell php-config --extension-dir)
