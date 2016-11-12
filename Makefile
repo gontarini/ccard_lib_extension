@@ -1,3 +1,5 @@
+NAME = HyperLogLogPlusPlus
+
 CPP             = g++
 RM              = rm -f
 CPP_FLAGS       = -Wall -c -I. -O2 -std=c++11
@@ -11,7 +13,7 @@ LD              = g++
 LD_FLAGS        = -Wall -shared -O2
 RESULT          = HyperLogLogPlusPlus.so
 
-PHPINIFILE		= extension_hyperLogLog.ini
+PHPINIFILE		= HyperLogLogPlusPlus.ini
 
 SOURCES			= $(wildcard *.cpp)
 OBJECTS         = $(SOURCES:%.cpp=%.o)

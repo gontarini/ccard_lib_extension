@@ -1,15 +1,21 @@
 #include "HyperLogLogPlusPlus.h"
-
+extern "C"{
+    #include "ccard-lib/include/ccard_common.h"
+    #include "ccard-lib/include/hyperloglogplus_counting.h"
+}
+using namespace std;
 
 class HyperLogLogPlusPlus : public Php::Base{
     private:
         int _payload;
+        
 
     public:
         /**
         *  c++ constructor
         */
-        HyperLogLogPlusPlus() = default;
+       HyperLogLogPlusPlus() = default;
+
 
         /**
         *  c++ destructor
@@ -19,41 +25,75 @@ class HyperLogLogPlusPlus : public Php::Base{
          /**
          *  php "constructor"
          *  @param  params integer type for _payload variable
+         *  Creating empty native object - hllp_cnt_init()
          */
         void __construct(Php::Parameters &params)
         {
-            // copy first parameter (if available)
-            if (!params.empty()) _payload = params[0];
+            std::cout << "Php default constructor" << std::endl;
+
+            if (params.size() == 1) {
+                _payload = params[0];
+                std::cout<<"Invoking hllp_cnt_init() from library to be extended"<<std::endl;
+                hllp_cnt_ctx_t *ctx = hllp_cnt_raw_init(NULL, 16);
+
+                //TODO invoke C native method
+            }
+        }
+
+        //TODO delete it soon, just testing method
+        Php::Value get_payload(Php::Parameters &params) 
+        { 
+            std::cout<<params[0]<<std::endl;
+            return _payload = params.empty() ? 1 : (int)params[0];
+        }
+
+        /**
+        * Creating serialized object -> hllp_cnt_init function
+        * @param[in] string to be passed in order to create such object
+        */
+        void HyperLogLogPlusPlusString(Php::Parameters &params){
 
         }
 
+        /**
+        * Adding element to _payload instance
+        * Method connected to native hllp_cnt_offer method
+        */
+        void offer(Php::Parameters &params){
+            std::cout<<params[0]<<std::endl;
+        }
+
+        /**
+        * Computing numerical amount and returning result
+        * Native C method is hllp_cnt_card
+        */
+        Php::Value count(){
+            return "What should I return?";
+        }
+
+        /**
+        * Merging this class instance with the instance given as a parameter
+        * @params instance of class itself
+        * Associated method in native C lib is hllp_cnt_merge
+        */
+        void merge(Php::Parameters &params){
+
+        }
+
+        /**
+        * Merging class instances but in serialized mode
+        * @params serialized object, string
+        * Associated method in native C lib is hllp_merge_bytes
+        */
+        void mergeRaw(Php::Parameters &params){
+
+        }
+
+        Php::Value toString(){
+            return "so far no object to return";
+        }
+
 };
-//        HyperLogLogPlusPlus( int ) {
-//         //utwórz pusty obiekt (hllp_cnt_init)
-//        }
-
-//       public function HyperLogLogPlusPlus( string ) {
-//          // utwórz obiekt z serialiowanego (hllp_cnt_init)
-//       }
-//       public function offer( string ) {
-//          // dodaj element do payload  (hllp_cnt_offer)
-//       }
-//       public function count() {
-//          //zwróc liczebność obiektu (hllp_cnt_card)
-//       }
-//
-//       public function merge( HyperLogLogPlusPlus ) {
-//          //dodaj obiekt z paramteru do obecnego obiektu  (hllp_cnt_merge)
-//       }
-//
-//       public function mergeRaw( string ) {
-//         //dodaje obiekt ale w postaci serializowanej (hllp_merge_bytes)
-//       }
-//       public function toString() {
-//          //zwróc string reprezentujący ten obiekt, tak żeby można go było podać do konstruktura i dostać ten sam wynik (hllp_cnt_get_bytes)
-//       }
-
-
 
 
 /**
@@ -61,7 +101,8 @@ class HyperLogLogPlusPlus : public Php::Base{
  */
 extern "C" {
     //TODO how to include ccardlib library here
-    //#include "my-C-code.h"
+    
+    //including headers of ccard-lib  
 
 
     /**
@@ -75,19 +116,21 @@ extern "C" {
     {
         // static(!) Php::Extension object that should stay in memory
         // for the entire duration of the process (that's why it's static)
-        static Php::Extension hyperExtension("hyperLogLog", "1.0");
+        static Php::Extension hyperExtension("HyperLogLogPlusPlus", "1.0");
 
         Php::Class<HyperLogLogPlusPlus> hyperLogLogPlusPlus("HyperLogLogPlusPlus");
-
-//        hyperLogLogPlusPlus.m
-//        counter.method<&Counter::increment> ("increment");
-//        counter.method<&Counter::decrement> ("decrement");
-//        counter.method<&Counter::value>     ("value");
+        hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::__construct>("__construct",{
+            Php::ByRef("payload", Php::Type::Numeric)
+        });
+        hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::get_payload>("get_payload", {});
+        hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::count>("count", {});
+        hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::offer>("offer", {
+            Php::ByVal("object", Php::Type::String)
+        });
 
         // add the class to the extension
         hyperExtension.add(std::move(hyperLogLogPlusPlus));
 
-        // @todo    add your own functions, classes, namespaces to the extension
 
         // return the extension
         return hyperExtension;
