@@ -23,7 +23,7 @@ OBJECTS         = $(SOURCES:%.cpp=%.o)
 all:	${OBJECTS} ${RESULT}
 
 ${RESULT}: ${OBJECTS}
-		${LD} ${LD_FLAGS} -o $@ ${OBJECTS} -lphpcpp
+		${LD} ${LD_FLAGS} -o $@ ${OBJECTS} -lphpcpp -lccard-lib
 
 clean:
 		${RM} *.obj *~* ${OBJECTS} ${RESULT}

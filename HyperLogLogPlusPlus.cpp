@@ -1,15 +1,34 @@
 #include "HyperLogLogPlusPlus.h"
+
 extern "C"{
-    #include "ccard-lib/include/ccard_common.h"
+     // #include "ccard-lib/include/ccard_common.h"
     #include "ccard-lib/include/hyperloglogplus_counting.h"
 }
+
 using namespace std;
 
 class HyperLogLogPlusPlus : public Php::Base{
     private:
+        /**
+        *   Object to be calculated
+        */
         int _payload;
-        
 
+        /**
+        *   Payload integer
+        */
+        Php::Value _payload_int;
+
+        /**
+        *   Payload string
+        */
+        Php::Value _payload_str;
+        /**
+        * Context
+        */
+        hllp_cnt_ctx_t *ctx;
+
+        int64_t xxx;       
     public:
         /**
         *  c++ constructor
@@ -25,26 +44,16 @@ class HyperLogLogPlusPlus : public Php::Base{
          /**
          *  php "constructor"
          *  @param  params integer type for _payload variable
-         *  Creating empty native object - hllp_cnt_init()
+         *  Creating empty native object - hllp_cnt_init(), which creates a context
          */
         void __construct(Php::Parameters &params)
         {
-            std::cout << "Php default constructor" << std::endl;
-
-            if (params.size() == 1) {
-                _payload = params[0];
-                std::cout<<"Invoking hllp_cnt_init() from library to be extended"<<std::endl;
-                hllp_cnt_ctx_t *ctx = hllp_cnt_raw_init(NULL, 16);
-
-                //TODO invoke C native method
-            }
-        }
-
-        //TODO delete it soon, just testing method
-        Php::Value get_payload(Php::Parameters &params) 
-        { 
-            std::cout<<params[0]<<std::endl;
-            return _payload = params.empty() ? 1 : (int)params[0];
+            if (params.size() == 1){
+               std::cout<<"Invoking hllp_cnt_init() from library to be extended"<<std::endl;
+               _payload_int = params[0];
+               ctx = hllp_cnt_init(NULL, (int)_payload_int);
+               // std::cout<< ctx << std::endl;
+            }   
         }
 
         /**
@@ -52,15 +61,18 @@ class HyperLogLogPlusPlus : public Php::Base{
         * @param[in] string to be passed in order to create such object
         */
         void HyperLogLogPlusPlusString(Php::Parameters &params){
-
+            ctx = hllp_cnt_init(params[0], params[0].length());
+            // std::cout<<ctx<<std::endl;
         }
 
+//TODO ask about second parameter
+        
         /**
         * Adding element to _payload instance
         * Method connected to native hllp_cnt_offer method
         */
         void offer(Php::Parameters &params){
-            std::cout<<params[0]<<std::endl;
+            // _payload_int = hllp_cnt_offer(ctx, )
         }
 
         /**
@@ -68,7 +80,9 @@ class HyperLogLogPlusPlus : public Php::Base{
         * Native C method is hllp_cnt_card
         */
         Php::Value count(){
-            return "What should I return?";
+            // std::cout<<hllp_cnt_card(ctx);
+            // std::cout<<ctx<<std::endl;
+            return hllp_cnt_card(ctx);
         }
 
         /**
@@ -91,6 +105,22 @@ class HyperLogLogPlusPlus : public Php::Base{
 
         Php::Value toString(){
             return "so far no object to return";
+        }
+
+        /**
+        * Background cating to integer type
+        */
+        long __toInteger()
+        {
+            return _payload_int;
+        }
+
+
+        //TODO delete it soon, just testing method
+        Php::Value get_payload(Php::Parameters &params) 
+        { 
+            // std::cout<<params[0]<<std::endl;
+            return _payload_int;// = params.empty() ? 1 : (int)params[0];
         }
 
 };
@@ -117,15 +147,18 @@ extern "C" {
         // static(!) Php::Extension object that should stay in memory
         // for the entire duration of the process (that's why it's static)
         static Php::Extension hyperExtension("HyperLogLogPlusPlus", "1.0");
-
+ 
         Php::Class<HyperLogLogPlusPlus> hyperLogLogPlusPlus("HyperLogLogPlusPlus");
         hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::__construct>("__construct",{
-            Php::ByRef("payload", Php::Type::Numeric)
+            Php::ByRef("_payload_php", Php::Type::Numeric)
         });
         hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::get_payload>("get_payload", {});
         hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::count>("count", {});
         hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::offer>("offer", {
             Php::ByVal("object", Php::Type::String)
+        });
+        hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::HyperLogLogPlusPlusString>("HyperLogLogPlusPlusString",{
+            Php::ByVal("_payload_str", Php::Type::String)
         });
 
         // add the class to the extension

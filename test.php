@@ -1,11 +1,11 @@
 <?php
- $payload = 15;
+ $payload = 16;
  $object2 = new HyperLogLogPlusPlus($payload);
- echo $object2 ->count();
- echo "";
 
- $str = "Pawel";
- $object2 -> offer("cos");
- #$value = 2;
- #$object2->get_payload($value);
+
+ // $object2 -> offer("cos");
+ // $value = 2;
+ // echo $object2->get_payload();
+ $object2->HyperLogLogPlusPlusString("pawel");
+ $object2->count();
 ?>
