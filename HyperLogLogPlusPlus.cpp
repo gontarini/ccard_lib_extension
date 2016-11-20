@@ -9,61 +9,40 @@ using namespace std;
 class HyperLogLogPlusPlus : public Php::Base{
     private:
         /**
-        *   Estimating object
+        *   Variable storing buffer of serialized object
         */
-        int _payload;
-
-        /**
-        * Serialized bitmap 
-        */
-        string serialized;
-
-        int value;
-
-        /**
-        *   Payload integer
-        */
-        Php::Value _payload_int;
-
-        /**
-        *   Payload string
-        */
-        // Php::Value _payload_str;
+        const char* _bitmap;
 
         /**
         * Context
         */
         hllp_cnt_ctx_t *ctx;
+
+        /**
+        * Pointer to bitmap length
+        */
+        int _length;
+
+        /**
+        *   Pointer for length storage variable
+        */
+        uint32_t* _lengthPointer;
+
+        /**
+        *   Variable used only toString() method which indicates output place for native method
+        */
+        char* _bitmapStorage;
     public:
         /**
         *  c++ constructor
         */
-       HyperLogLogPlusPlus(){
-            std::cout << "defualt c++ constructor"<<std::endl;
-       }
+       HyperLogLogPlusPlus() = default;
 
         /**
-        * Paramtertic constructor with serialized bitmap  
-        */
-
-       // HyperLogLogPlusPlus(string &serialized_object) : serialized(serialized_object){
-       //      ctx = hllp_cnt_init(&serialized_object, serialized_object.length());
-       //      std::cout<<"String " << std::endl;
-       // }
-
-        /**
-        *   Parametric constructor with bitmap length specified
-        */
-       HyperLogLogPlusPlus(int payload){
-            value = payload;
-            std::cout<<"Setting payload int"<< value << std::endl;
-       }
-
-        /**
-        *  c++ destructor
+        *  c++ destructor, TODO add destroying ctx
         */
         virtual ~HyperLogLogPlusPlus(){
-            std::cout<<"destructor"<<std::endl;
+    
         }
 
         virtual void __destruct()
@@ -73,37 +52,74 @@ class HyperLogLogPlusPlus : public Php::Base{
     
          /**
          *  php "constructor"
-         *  @param  params integer type for _payload variable
-         *  Creating empty native object - hllp_cnt_init(), which creates a context
+         *  @param  either bitmap_length or bitma_length with bitmap object
+         *  Creating native object - hllp_cnt_init(), creating context for library
          */
         void __construct(Php::Parameters &params)
         {
-            if (params.size() == 1){
-               std::cout<<"Invoking hllp_cnt_init() from library to be extended"<<std::endl;
-               // new HyperLogLogPlusPlus((int)params[0]);
-               ctx = hllp_cnt_init(NULL, 16);
-               std::cout<< ctx << std::endl;
-            }   
+            // if (params.size() == 1){
+            //    std::cout<<"Invoking hllp_cnt_init() without serialized object from extending library"<<std::endl;
+            //    Php::Value self(this);
+            //    self["_length"] = params[0];
+            //    ctx = hllp_cnt_init(NULL, _length);
+            //    std::cout<< ctx <<" " << getLength() << std::endl;
+            // }else if (params.size() == 2){
+            //     std::cout<<"Invoking hllp_cnt_init() without serialized object from extending library"<<std::endl;
+            //     ctx = hllp_cnt_init(params[0], params[0].length());
+
+            // }
+            // else{
+            //     std::cout<<"Invalid amount of argument passed"<<std::endl;
+            //     std::cout<<"Accepted amounts are either 1 or 2!"<<std::endl;
+            // }
         }
 
         /**
-        * Creating serialized object -> hllp_cnt_init function
-        * @param[in] string to be passed in order to create such object
+        *  Setter for length of the bitmap
         */
-        void HyperLogLogPlusPlusString(Php::Parameters &params){
-            ctx = hllp_cnt_init(params[0], params[0].length());
-            std::cout<<ctx<<std::endl;
+        void setLength(const Php::Value &length){
+            _length = (int)length;
+            std::cout<<"Bitmap length loaded to property ="<<_length<<std::endl;
         }
 
-        //TODO ask about second parameter
+        /**
+        * Getter for length of the bitmap
+        */
+        Php::Value getLength() const{
+            return _length;
+        }
+
+        void setBitmap(const Php::Value &bitmap){
+            _bitmap = bitmap;
+            std::cout<<"Bitmap loaded to property ="<<_bitmap<<std::endl;
+        }
+
+        Php::Value getBitmap() const{
+            return _bitmap;
+        }
+
+        void initSerialized(){
+            std::cout<<"Invoking hllp_cnt_init() with serialized object from extending library"<<std::endl;
+            std::cout<<"_bitmap " <<_bitmap << " length" << _length <<std::endl;
+
+            ctx = hllp_cnt_raw_init(_bitmap, _length);
+            std::cout<<"Created context: " <<ctx << std::endl;
+        }
+
+        void init(){
+            std::cout<<"Invoking hllp_cnt_init() without serialized object from extending library"<<std::endl;
+            ctx = hllp_cnt_init(NULL, _length);
+            std::cout<<"Created context: " <<ctx << std::endl;
+        }
         
         /**
-        * Adding element to _payload instance
+        * Adding element to context instance
         * Method connected to native hllp_cnt_offer method
         */
-        void offer(Php::Parameters &params){
-            std::cout<<params[0]<<std::endl;
-             _payload= hllp_cnt_offer(ctx, &params[0], sizeof(params[0]));
+        Php::Value offer(Php::Parameters &params){
+            std::cout<< "Adding element " << params[0] << " of size " <<sizeof(params[0]) <<" to context" << std::endl;
+            int result = hllp_cnt_offer(ctx, params[0], sizeof(params[0]));
+            return result;
         }
 
         /**
@@ -111,10 +127,26 @@ class HyperLogLogPlusPlus : public Php::Base{
         * Native C method is hllp_cnt_card
         */
         Php::Value count(){
-            std::cout<<hllp_cnt_card(ctx)<< std::endl;
-            // std::cout<<ctx<<std::endl;
+            // std::cout<<hllp_cnt_card(ctx)<< std::endl;
             return hllp_cnt_card(ctx);
         }
+
+        /**
+        * Get the serialized bitmap or bitmap length from context.
+        */
+        Php::Value toString(){
+            int res = hllp_cnt_get_raw_bytes(ctx, &_bitmapStorage, _lengthPointer);
+            if (res!= -1){
+                std::cout<<"toString proceeded correctly"<< std::endl;
+                return _bitmapStorage;
+            }
+            else{
+                std::cout<<"Error in toString method. Result code "<< res << endl;
+                return -1;
+            }
+
+        }
+
 
         /**
         * Merging this class instance with the instance given as a parameter
@@ -122,7 +154,23 @@ class HyperLogLogPlusPlus : public Php::Base{
         * Associated method in native C lib is hllp_cnt_merge
         */
         void merge(Php::Parameters &params){
+            Php::Value value = params[0];
+            HyperLogLogPlusPlus *t = (HyperLogLogPlusPlus*) value.implementation();
 
+            hllp_cnt_ctx_t *tmb = t->getContext();
+            int result = hllp_cnt_merge(ctx, tmb, NULL);
+            std::cout<<result << " <--- result of Merging (0 - positive, -1 - negative)"<< std::endl;
+        }
+
+        /**
+        * Context getter
+        */
+        hllp_cnt_ctx_t* getContext(){
+            return ctx;
+        }
+
+        uint32_t* getLenPointer(){
+            return _lengthPointer;
         }
 
         /**
@@ -131,27 +179,12 @@ class HyperLogLogPlusPlus : public Php::Base{
         * Associated method in native C lib is hllp_merge_bytes
         */
         void mergeRaw(Php::Parameters &params){
-
-        }
-
-        /**
-        * Background cating to integer type
-        */
-        long __toInteger()
-        {
-            return _payload_int;
-        }
-
-
-        //TODO delete it soon, just testing method
-        Php::Value get_payload(Php::Parameters &params) 
-        { 
-            std::string bitmap = "noname12312dfasdasdasdc1edasazcfedvz";
-            std::cout<<(int)params[0]<<std::endl;
-            std::cout<<bitmap.length()<<std::endl;
-            ctx = hllp_cnt_init(&bitmap, bitmap.length());
-            std::cout << ctx << std::endl;
-            return _payload_int;// = params.empty() ? 1 : (int)params[0];
+            Php::Value value = params[1];
+            HyperLogLogPlusPlus *t = (HyperLogLogPlusPlus*) value.implementation();
+            uint32_t *size = t->getLenPointer();
+            uint32_t s = 1027;
+            int result = hllp_cnt_merge_raw_bytes(ctx, params[0], s);
+            std::cout<<"mergeRaw result = "<<result << std::endl;
         }
 
 };
@@ -175,20 +208,27 @@ extern "C" {
         static Php::Extension hyperExtension("HyperLogLogPlusPlus", "1.0");
  
         Php::Class<HyperLogLogPlusPlus> hyperLogLogPlusPlus("HyperLogLogPlusPlus");
-        hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::__construct>("__construct",{
-            Php::ByRef("int", Php::Type::Numeric)
-        });
+        hyperLogLogPlusPlus.property("_length", &HyperLogLogPlusPlus::getLength, &HyperLogLogPlusPlus::setLength);
+        hyperLogLogPlusPlus.property("_bitmap", &HyperLogLogPlusPlus::getBitmap, &HyperLogLogPlusPlus::setBitmap);
+        hyperLogLogPlusPlus.property("ctx", &HyperLogLogPlusPlus::getContext);
+        hyperLogLogPlusPlus.property("_lengthPointer", &HyperLogLogPlusPlus::getLenPointer);
 
+        hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::init>("init",{});
+        hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::initSerialized>("initSerialized",{});
+        // hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::__construct>("__construct",{
+        //     Php::ByRef("int", Php::Type::Numeric)
+        // });
+        hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::toString>("toString",{});  
 
-        hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::get_payload>("get_payload", {
-            Php::ByVal("int", Php::Type::Numeric)
-        });
         hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::count>("count", {});
         hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::offer>("offer", {
             Php::ByVal("object", Php::Type::String)
         });
-        hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::HyperLogLogPlusPlusString>("HyperLogLogPlusPlusString",{
-            Php::ByVal("_payload_str", Php::Type::String)
+
+        hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::merge>("merge", {});
+        hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::mergeRaw>("mergeRaw", {
+            Php::ByVal("bitmap", Php::Type::String),
+            Php::ByVal("len", Php::Type::Numeric)
         });
 
         // add the class to the extension
