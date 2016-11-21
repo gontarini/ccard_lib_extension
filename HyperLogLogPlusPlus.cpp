@@ -32,6 +32,11 @@ class HyperLogLogPlusPlus : public Php::Base{
         *   Variable used only toString() method which indicates output place for native method
         */
         char* _bitmapStorage;
+
+        /**
+        *   Length of merging bitmap
+        */
+        int _lengthMerge;
     public:
         /**
         *  c++ constructor
@@ -98,6 +103,9 @@ class HyperLogLogPlusPlus : public Php::Base{
             return _bitmap;
         }
 
+        /**
+        *   Initilize hllp_cnt_t context with serialized object
+        */
         void initSerialized(){
             std::cout<<"Invoking hllp_cnt_init() with serialized object from extending library"<<std::endl;
             std::cout<<"_bitmap " <<_bitmap << " length" << _length <<std::endl;
@@ -106,6 +114,10 @@ class HyperLogLogPlusPlus : public Php::Base{
             std::cout<<"Created context: " <<ctx << std::endl;
         }
 
+
+        /**
+        *   Initilize hllp_cnt_t context without serialized object
+        */
         void init(){
             std::cout<<"Invoking hllp_cnt_init() without serialized object from extending library"<<std::endl;
             ctx = hllp_cnt_init(NULL, _length);
@@ -127,7 +139,6 @@ class HyperLogLogPlusPlus : public Php::Base{
         * Native C method is hllp_cnt_card
         */
         Php::Value count(){
-            // std::cout<<hllp_cnt_card(ctx)<< std::endl;
             return hllp_cnt_card(ctx);
         }
 
@@ -135,7 +146,7 @@ class HyperLogLogPlusPlus : public Php::Base{
         * Get the serialized bitmap or bitmap length from context.
         */
         Php::Value toString(){
-            int res = hllp_cnt_get_raw_bytes(ctx, &_bitmapStorage, _lengthPointer);
+            int res = hllp_cnt_get_bytes(ctx, &_bitmapStorage, _lengthPointer);
             if (res!= -1){
                 std::cout<<"toString proceeded correctly"<< std::endl;
                 return _bitmapStorage;
@@ -169,22 +180,33 @@ class HyperLogLogPlusPlus : public Php::Base{
             return ctx;
         }
 
+        /**
+        *   Storage for bitmap length getter
+        */
         uint32_t* getLenPointer(){
             return _lengthPointer;
         }
 
         /**
         * Merging class instances but in serialized mode
-        * @params serialized object, string
+        * @params[in] serialized object, string and length of the bitmap
+        * @params[in] length of the bitmap
         * Associated method in native C lib is hllp_merge_bytes
         */
         void mergeRaw(Php::Parameters &params){
-            Php::Value value = params[1];
-            HyperLogLogPlusPlus *t = (HyperLogLogPlusPlus*) value.implementation();
-            uint32_t *size = t->getLenPointer();
-            uint32_t s = 1027;
-            int result = hllp_cnt_merge_raw_bytes(ctx, params[0], s);
+            std::cout<< params[0] << " bitmap to merged" << std::endl;
+            // HyperLogLogPlusPlus *t = (HyperLogLogPlusPlus*) value.implementation();
+            // uint32_t size = t->getLenPointer();
+            // uint32_t s = 1027;
+            int result = hllp_cnt_merge_raw_bytes(ctx, params[0], _lengthMerge);
             std::cout<<"mergeRaw result = "<<result << std::endl;
+        }
+
+        /**
+        * Setter of bitmap length to be merged
+        */
+        void setLengthMerge(const Php::Value &lengthMerge){
+            _lengthMerge = lengthMerge;
         }
 
 };
@@ -212,12 +234,15 @@ extern "C" {
         hyperLogLogPlusPlus.property("_bitmap", &HyperLogLogPlusPlus::getBitmap, &HyperLogLogPlusPlus::setBitmap);
         hyperLogLogPlusPlus.property("ctx", &HyperLogLogPlusPlus::getContext);
         hyperLogLogPlusPlus.property("_lengthPointer", &HyperLogLogPlusPlus::getLenPointer);
+        hyperLogLogPlusPlus.property("_lengthMerge", &HyperLogLogPlusPlus::setLengthMerge);
 
         hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::init>("init",{});
         hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::initSerialized>("initSerialized",{});
         // hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::__construct>("__construct",{
         //     Php::ByRef("int", Php::Type::Numeric)
         // });
+
+        hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::__construct>("__construct",{});
         hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::toString>("toString",{});  
 
         hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::count>("count", {});
