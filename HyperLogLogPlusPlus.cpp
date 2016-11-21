@@ -31,7 +31,7 @@ class HyperLogLogPlusPlus : public Php::Base{
         /**
         *   Variable used only toString() method which indicates output place for native method
         */
-        char* _bitmapStorage;
+        string* _bitmapStorage;
 
         /**
         *   Length of merging bitmap
@@ -60,24 +60,7 @@ class HyperLogLogPlusPlus : public Php::Base{
          *  @param  either bitmap_length or bitma_length with bitmap object
          *  Creating native object - hllp_cnt_init(), creating context for library
          */
-        void __construct(Php::Parameters &params)
-        {
-            // if (params.size() == 1){
-            //    std::cout<<"Invoking hllp_cnt_init() without serialized object from extending library"<<std::endl;
-            //    Php::Value self(this);
-            //    self["_length"] = params[0];
-            //    ctx = hllp_cnt_init(NULL, _length);
-            //    std::cout<< ctx <<" " << getLength() << std::endl;
-            // }else if (params.size() == 2){
-            //     std::cout<<"Invoking hllp_cnt_init() without serialized object from extending library"<<std::endl;
-            //     ctx = hllp_cnt_init(params[0], params[0].length());
-
-            // }
-            // else{
-            //     std::cout<<"Invalid amount of argument passed"<<std::endl;
-            //     std::cout<<"Accepted amounts are either 1 or 2!"<<std::endl;
-            // }
-        }
+        void __construct(Php::Parameters &params){ }
 
         /**
         *  Setter for length of the bitmap
@@ -146,7 +129,14 @@ class HyperLogLogPlusPlus : public Php::Base{
         * Get the serialized bitmap or bitmap length from context.
         */
         Php::Value toString(){
-            int res = hllp_cnt_get_bytes(ctx, &_bitmapStorage, _lengthPointer);
+            int res = hllp_cnt_get_bytes(ctx, &_bitmapStorage,  _lengthPointer);
+
+            // if(hllp_cnt_get_bytes(ctx, &_bitmapStorage,  _lengthPointer)){
+            //     printf("Failed toString: %s",hllp_cnt_errstr(hllp_cnt_errnum(ctx)));
+            // }
+
+            // std::cout<< _bitmapStorage << std::endl;
+
             if (res!= -1){
                 std::cout<<"toString proceeded correctly"<< std::endl;
                 return _bitmapStorage;
@@ -194,12 +184,13 @@ class HyperLogLogPlusPlus : public Php::Base{
         * Associated method in native C lib is hllp_merge_bytes
         */
         void mergeRaw(Php::Parameters &params){
-            std::cout<< params[0] << " bitmap to merged" << std::endl;
+            std::cout<< params[0] << " bitmap, length "<<_lengthMerge<<" to merged" << std::endl;
             // HyperLogLogPlusPlus *t = (HyperLogLogPlusPlus*) value.implementation();
             // uint32_t size = t->getLenPointer();
-            // uint32_t s = 1027;
-            int result = hllp_cnt_merge_raw_bytes(ctx, params[0], _lengthMerge);
-            std::cout<<"mergeRaw result = "<<result << std::endl;
+            // int result = hllp_cnt_merge_raw_bytes(ctx, params[0], _lengthMerge);
+            if(hllp_cnt_merge_bytes(ctx,  params[0], _lengthMerge)) {
+                printf("Failed to merge bitmaps: %s",hllp_cnt_errstr(hllp_cnt_errnum(ctx)));
+            }
         }
 
         /**
@@ -207,6 +198,10 @@ class HyperLogLogPlusPlus : public Php::Base{
         */
         void setLengthMerge(const Php::Value &lengthMerge){
             _lengthMerge = lengthMerge;
+        }
+
+        Php::Value getLengthMerge()const{
+            return _lengthMerge;
         }
 
 };
@@ -234,7 +229,7 @@ extern "C" {
         hyperLogLogPlusPlus.property("_bitmap", &HyperLogLogPlusPlus::getBitmap, &HyperLogLogPlusPlus::setBitmap);
         hyperLogLogPlusPlus.property("ctx", &HyperLogLogPlusPlus::getContext);
         hyperLogLogPlusPlus.property("_lengthPointer", &HyperLogLogPlusPlus::getLenPointer);
-        hyperLogLogPlusPlus.property("_lengthMerge", &HyperLogLogPlusPlus::setLengthMerge);
+        hyperLogLogPlusPlus.property("_lengthMerge", &HyperLogLogPlusPlus::getLengthMerge, &HyperLogLogPlusPlus::setLengthMerge);
 
         hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::init>("init",{});
         hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::initSerialized>("initSerialized",{});
