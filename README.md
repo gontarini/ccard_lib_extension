@@ -8,8 +8,8 @@ To build extensions, just type execute bash script:
 In the source files you can find 3 php test scripts:
 - test.php: presents proper way of using class without serializing objects
 
--test_serialized.php: presents proper way of using class with serializing objects
+- test_serialized.php: presents proper way of using class with serializing objects
 
--bad_test.php: presents incorrect way of using class. Find prompt logs in order to see bad bitmap lengths passed as well as merging objects which were created in a different ways (with and without serialized object)
+- bad_test.php: presents incorrect way of using class. Find prompt logs in order to see bad bitmap lengths passed as well as merging objects which were created in a different ways (with and without serialized object)
 
 
