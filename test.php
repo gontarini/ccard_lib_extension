@@ -1,28 +1,27 @@
 <?php
  $payload = 16;
- $object2 = new HyperLogLogPlusPlus();
- $object2->_length = $payload;
- // $object2->_bitmap = "9876543";
- // echo $object2->_length."\n";
- // echo $object2->_bitmap."\n";
- $object2->init();
- // $object2->initSerialized();
- // echo $object2->offer(155)."\n";
- echo $object2->offer("155812937128397")."\n";
- echo $object2->offer("151823971283712978")."\n";
+ $object = new HyperLogLogPlusPlus($payload);
+ $result1 = $object->offer("1982732193");
+ echo "Result : ",$result1."\n\n";
+ $result2 = $object->offer("151823971283712978");
+ echo "Result : ",$result2."\n\n";
 
- $str = $object2->toString()."\n"; //smth is wrong
- echo "Objects amount in the context: ";
- echo $object2->count()."\n";
+ echo "To string convertion : ",$str = $object->toString()."\n\n";
 
- $object3 = new HyperLogLogPlusPlus();
- $object3->_length = $payload;
- // $object3->_bitmap = "151823971283712978155812937128397";
- // $object3->initSerialized();
- $object3->init();
+ $object2 = new HyperLogLogPlusPlus($payload);
 
- // $object2->merge($object3);
-$object2->_lengthMerge = 16;
-$object2->mergeRaw(1231541252131231, 16);
+ $result1 = $object2->offer("1518211111712978");
+ echo "Result : ",$result1."\n\n";
+
+ $object3 = new HyperLogLogPlusPlus($payload);
+ $result1 = $object3->offer("11517645978");
+ echo "Result : ",$result1."\n\n";
+
+
+ $object3->merge($object2);
+
+ echo "Cardinality: ",$object3->count()."\n\n";
+
+ $object3->mergeRaw($str, 65536);
 
 ?>

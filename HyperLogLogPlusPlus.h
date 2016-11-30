@@ -1,5 +1,6 @@
 #include <string>
 #include <iostream>
+#include <cmath>
 
 /**
  * 	Our own library.
