@@ -22,6 +22,6 @@
 
  echo "Cardinality: ",$object3->count()."\n\n";
 
- $object3->mergeRaw($str, 65536);
+ $object3->mergeRaw($str);
 
 ?>
