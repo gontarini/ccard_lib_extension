@@ -31,8 +31,15 @@ class HyperLogLogPlusPlus : public Php::Base{
         /**
         * Php magic destructor
         */
-        virtual void __destruct(){}
+        virtual void __destruct(){
+            hllp_cnt_fini(_ctx);
+        }
     
+        /**
+        * Disable copy constructor
+        */
+        HyperLogLogPlusPlus(const HyperLogLogPlusPlus &hyperLogLogPlusPlus) = delete;
+
          /**
          *  php "constructor"
          *  @param  either bitmap_length or bitma_length with bitmap object
@@ -42,10 +49,16 @@ class HyperLogLogPlusPlus : public Php::Base{
             if( params.size() == 2 ) {
                 const char* _bitmap = params[1];
                 _length = params[0];
-                _ctx = hllp_cnt_raw_init(_bitmap, _length);
+                _ctx = hllp_cnt_init(_bitmap, _length);
+                if (_ctx == NULL){
+                    throw Php::Exception("Initialization error. Counting algorithm, hash function or length not match.");
+                }
             } else {
                 _length = params[0];
                 _ctx = hllp_cnt_init(NULL, _length);
+                if (_ctx == NULL){
+                    throw Php::Exception("Initialization error.");
+                }
             }
         }
         
@@ -95,7 +108,7 @@ class HyperLogLogPlusPlus : public Php::Base{
             Php::Value value = params[0];
             HyperLogLogPlusPlus *t = (HyperLogLogPlusPlus*) value.implementation();
 
-            hllp_cnt_ctx_t *tmb = t->getContext();
+            hllp_cnt_ctx_t *tmb = t->_ctx;
 
             int result = hllp_cnt_merge(_ctx, tmb, NULL);
             if(result) {
@@ -113,7 +126,7 @@ class HyperLogLogPlusPlus : public Php::Base{
         * @params[in] length of the bitmap
         * Associated method in native C lib is hllp_merge_bytes
         */
-       Php::Value mergeRaw(Php::Parameters &params){
+        Php::Value mergeRaw(Php::Parameters &params){
             int _lengthMerge = params[0].size();
             int result = hllp_cnt_merge_raw_bytes(_ctx, params[0], _lengthMerge, NULL);
             if(result) {
@@ -122,13 +135,6 @@ class HyperLogLogPlusPlus : public Php::Base{
             else{
                 return true;
             }
-        }
-
-        /**
-        * Context getter
-        */
-        hllp_cnt_ctx_t* getContext(){
-            return _ctx;
         }
 
         /**
@@ -158,8 +164,7 @@ extern "C" {
         static Php::Extension hyperExtension("HyperLogLogPlusPlus", "1.0");
  
         Php::Class<HyperLogLogPlusPlus> hyperLogLogPlusPlus("HyperLogLogPlusPlus");
-        hyperLogLogPlusPlus.property("_length", &HyperLogLogPlusPlus::getLength);
-        hyperLogLogPlusPlus.property("_ctx", &HyperLogLogPlusPlus::getContext);
+        hyperLogLogPlusPlus.property("bits", &HyperLogLogPlusPlus::getLength);
 
         hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::__construct>("__construct",{
             Php::ByVal("size", Php::Type::Numeric),
@@ -173,7 +178,9 @@ extern "C" {
             Php::ByVal("object", Php::Type::String)
         });
 
-        hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::merge>("merge", {});
+        hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::merge>("merge", {
+            Php::ByVal("hyperObject", "HyperLogLogPlusPlus")
+        });
         hyperLogLogPlusPlus.method<&HyperLogLogPlusPlus::mergeRaw>("mergeRaw", {
             Php::ByVal("bitmap", Php::Type::String),
         });

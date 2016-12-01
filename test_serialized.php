@@ -10,8 +10,14 @@
 
  echo "To string convertion : ",$str2 = $object->toString()."\n\n";
 
- $object2 = new HyperLogLogPlusPlus($payload,$str1);
- $object3 = new HyperLogLogPlusPlus($payload,$str2);
+try{
+ 	$object2 = new HyperLogLogPlusPlus(65539,$str1);
+}
+catch(Exception $e){
+	echo "" .$e->getMessage()."\n";
+}
+
+ $object3 = new HyperLogLogPlusPlus(65539,$str2);
 
  $result1 = $object2->offer("1518211111712978");
  echo "Result : ",$result1."\n\n";
